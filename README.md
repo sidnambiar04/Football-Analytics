@@ -61,4 +61,4 @@ Football-Analytics/
 
 ## 👨‍💻 Author
 
-**Sidharth Nambiar**
+**Sidharth Nambiar**  **Vishnu Nair**  **Abhijit Babu**
