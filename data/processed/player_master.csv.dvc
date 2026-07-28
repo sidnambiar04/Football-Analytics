@@ -1,0 +1,5 @@
+outs:
+- md5: 3916380297922758c358a7e5420b13d0
+  size: 1623889
+  hash: md5
+  path: player_master.csv
