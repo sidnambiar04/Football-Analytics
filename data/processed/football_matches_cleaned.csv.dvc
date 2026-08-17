@@ -1,0 +1,5 @@
+outs:
+- md5: c55cdbf4fb1ac32bf451ef9469980a93
+  size: 1447256
+  hash: md5
+  path: football_matches_cleaned.csv
