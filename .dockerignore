@@ -1,0 +1,9 @@
+.git
+.github
+.dvc
+.venv
+__pycache__
+*.pyc
+.env
+notebooks
+data/raw
