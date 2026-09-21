@@ -1,0 +1,101 @@
+name: Football Analytics CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  lint-test:
+    name: Lint and Test FastAPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r api/requirements.txt
+          pip install flake8 requests
+
+      - name: Run Syntax Checks
+        run: |
+          flake8 api --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Code Quality Check
+        run: |
+          flake8 api --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Start FastAPI Server
+        run: |
+          uvicorn api.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+          echo $! > server.pid
+          sleep 8
+
+      - name: Check FastAPI Health
+        run: |
+          python -c "import urllib.request; response = urllib.request.urlopen('http://127.0.0.1:8000/'); print('Health Check:', response.read().decode())"
+
+      - name: Test Prediction Endpoint
+        run: |
+          python - <<'PY'
+          import requests
+
+          url = "http://127.0.0.1:8000/predict"
+
+          payload = {
+              "league": "Bundesliga",
+              "season": "2022-2023",
+              "div": "D1",
+              "hometeam": "Ein Frankfurt",
+              "awayteam": "Bayern Munich",
+              "referee": "Unknown",
+              "kickoff_hour": 19,
+              "time_of_day": "Evening / Night",
+              "shot_accuracy_away": 0.4347826087,
+              "total_shots": 31,
+              "total_shots_on_target": 12,
+              "total_fouls": 21,
+              "total_corners": 11,
+              "match_month": 5,
+              "match_dayofweek": 6
+          }
+
+          response = requests.post(url, json=payload)
+
+          print("Status Code:", response.status_code)
+          print("Response:", response.json())
+
+          assert response.status_code == 200
+          assert "prediction" in response.json()
+          assert "probabilities" in response.json()
+          PY
+
+      - name: Stop FastAPI Server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+          fi
+
+  docker-build:
+    name: Build Docker Image
+    needs: lint-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: |
+          docker build -t football-prediction-api:latest .
