@@ -43,7 +43,13 @@ st.set_page_config(
 def load_model():
     return joblib.load(MODEL_PATH)
 
+PRE_MATCH_MODEL_PATH = (
+    BASE_DIR / "model" / "pre_match_random_forest.pkl"
+)
 
+@st.cache_resource
+def load_pre_match_model():
+    return joblib.load(PRE_MATCH_MODEL_PATH)
 # ============================================================
 # LOAD DATA
 # ============================================================
@@ -89,13 +95,13 @@ page = st.sidebar.radio(
     [
         "Overview",
         "Match Prediction",
+        "Future Match Prediction",
         "Team Performance",
         "Model Explainability",
         "Model Metrics",
         "Drift Detection"
     ]
 )
-
 
 # ============================================================
 # OVERVIEW
@@ -171,7 +177,7 @@ if page == "Overview":
 elif page == "Match Prediction":
 
     st.header("⚽ Match Prediction")
-    
+
     st.subheader("Model Input")
 
     col1, col2 = st.columns(2)
@@ -351,6 +357,345 @@ elif page == "Match Prediction":
         pcol3.metric(
             "Away Win",
             f"{probability_dict.get('A', 0) * 100:.2f}%"
+        )
+
+# ============================================================
+# FUTURE MATCH PREDICTION
+# ============================================================
+
+elif page == "Future Match Prediction":
+
+    st.header("🔮 Future Match Prediction")
+
+    st.write(
+        "Predict the outcome of a future football match using "
+        "the pre-match Random Forest model."
+    )
+
+    st.info(
+        "This prediction uses only information that can be available "
+        "before the match. Match statistics such as shots, fouls and "
+        "corners are not required."
+    )
+
+    # ---------------------------------------------------------
+    # Load pre-match model
+    # ---------------------------------------------------------
+
+    future_model = load_pre_match_model()
+
+    # ---------------------------------------------------------
+    # League and season
+    # ---------------------------------------------------------
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        future_leagues = [
+            "PremierLeague",
+            "LaLiga",
+            "Bundesliga",
+            "SerieA",
+            "Ligue1"
+        ]
+
+        selected_future_league = st.selectbox(
+            "League",
+            future_leagues
+        )
+
+    with col2:
+
+        future_seasons = [
+            "2022-2023",
+            "2023-2024",
+            "2024-2025",
+            "2025-2026",
+            "2026-2027"
+        ]
+
+        selected_future_season = st.selectbox(
+            "Season",
+            future_seasons,
+            index=4
+        )
+
+    # ---------------------------------------------------------
+    # Division mapping
+    # ---------------------------------------------------------
+
+    division_map = {
+        "PremierLeague": "E0",
+        "LaLiga": "SP1",
+        "Bundesliga": "D1",
+        "SerieA": "I1",
+        "Ligue1": "F1"
+    }
+
+    selected_division = division_map[selected_future_league]
+
+    # ---------------------------------------------------------
+    # Teams
+    # ---------------------------------------------------------
+
+    future_teams_by_league = {
+    "PremierLeague": [
+        "Arsenal",
+        "Aston Villa",
+        "Bournemouth",
+        "Brentford",
+        "Brighton",
+        "Chelsea",
+        "Coventry",
+        "Crystal Palace",
+        "Everton",
+        "Fulham",
+        "Hull",
+        "Ipswich",
+        "Leeds",
+        "Liverpool",
+        "Man City",
+        "Man United",
+        "Newcastle",
+        "Nott'm Forest",
+        "Sunderland",
+        "Tottenham"
+    ],
+
+    "LaLiga": [
+        "Alaves",
+        "Ath Bilbao",
+        "Ath Madrid",
+        "Barcelona",
+        "Betis",
+        "Celta",
+        "Elche",
+        "Espanol",
+        "Getafe",
+        "La Coruna",
+        "Levante",
+        "Malaga",
+        "Osasuna",
+        "Racing Santander",
+        "Rayo Vallecano",
+        "Real Madrid",
+        "Real Sociedad",
+        "Sevilla",
+        "Valencia",
+        "Villarreal"
+    ],
+
+    "Bundesliga": [
+        "Augsburg",
+        "Bayern Munich",
+        "Dortmund",
+        "Ein Frankfurt",
+        "FC Koln",
+        "Freiburg",
+        "Hamburg",
+        "Heidenheim",
+        "Hoffenheim",
+        "Leverkusen",
+        "Mainz",
+        "Monchengladbach",
+        "Paderborn",
+        "RB Leipzig",
+        "Schalke 04",
+        "St Pauli",
+        "Stuttgart",
+        "Union Berlin",
+        "Werder Bremen",
+        "Elversberg"
+    ],
+
+    "SerieA": [
+        "AC Milan",
+        "Atalanta",
+        "Bologna",
+        "Cagliari",
+        "Como",
+        "Fiorentina",
+        "Frosinone",
+        "Genoa",
+        "Inter",
+        "Juventus",
+        "Lazio",
+        "Lecce",
+        "Monza",
+        "Napoli",
+        "Parma",
+        "Roma",
+        "Sassuolo",
+        "Torino",
+        "Udinese",
+        "Venezia"
+    ],
+
+    "Ligue1": [
+        "Angers",
+        "Auxerre",
+        "Brest",
+        "Le Havre",
+        "Le Mans",
+        "Lens",
+        "Lille",
+        "Lorient",
+        "Lyon",
+        "Marseille",
+        "Monaco",
+        "Nice",
+        "Paris FC",
+        "Paris SG",
+        "Rennes",
+        "Strasbourg",
+        "Toulouse",
+        "Troyes"
+    ]
+}
+
+    future_teams = future_teams_by_league[selected_future_league]
+
+    col1, col2 = st.columns(2)
+    with col1:
+
+        future_home_team = st.selectbox(
+            "Home Team",
+            future_teams
+        )
+
+    with col2:
+
+        future_away_team = st.selectbox(
+            "Away Team",
+            future_teams,
+            index=1 if len(future_teams) > 1 else 0
+        )
+
+    # ---------------------------------------------------------
+    # Match date and time
+    # ---------------------------------------------------------
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        match_date = st.date_input(
+            "Match Date"
+        )
+
+    with col2:
+
+        match_time = st.time_input(
+            "Kickoff Time"
+        )
+
+    # ---------------------------------------------------------
+    # Referee
+    # ---------------------------------------------------------
+
+    referee = st.text_input(
+        "Referee",
+        value="Unknown"
+    )
+
+    # ---------------------------------------------------------
+    # Prediction
+    # ---------------------------------------------------------
+
+    if st.button(
+        "Predict Future Match",
+        type="primary"
+    ):
+
+        kickoff_hour = match_time.hour
+
+        if kickoff_hour < 12:
+            time_of_day = "Morning"
+        elif kickoff_hour < 17:
+            time_of_day = "Afternoon"
+        else:
+            time_of_day = "Evening / Night"
+
+        match_month = match_date.month
+        match_dayofweek = match_date.weekday()
+
+        future_input = pd.DataFrame(
+            [{
+                "league": selected_future_league,
+                "season": selected_future_season,
+                "div": selected_division,
+                "hometeam": future_home_team,
+                "awayteam": future_away_team,
+                "referee": referee,
+                "kickoff_hour": float(kickoff_hour),
+                "time_of_day": time_of_day,
+                "match_month": match_month,
+                "match_dayofweek": match_dayofweek
+            }]
+        )
+
+        prediction = future_model.predict(
+            future_input
+        )[0]
+
+        probabilities = future_model.predict_proba(
+            future_input
+        )[0]
+
+        probability_dict = {
+            str(cls): float(prob)
+            for cls, prob in zip(
+                future_model.classes_,
+                probabilities
+            )
+        }
+
+        result_labels = {
+            "H": "Home Win",
+            "D": "Draw",
+            "A": "Away Win"
+        }
+
+        predicted_label = result_labels.get(
+            str(prediction),
+            "Unknown"
+        )
+
+        st.divider()
+
+        st.subheader("🔮 Predicted Outcome")
+
+        st.success(
+            f"**{future_home_team} vs {future_away_team}** → "
+            f"**{predicted_label}**"
+        )
+
+        st.subheader("Prediction Probabilities")
+
+        pcol1, pcol2, pcol3 = st.columns(3)
+
+        pcol1.metric(
+            "Home Win",
+            f"{probability_dict.get('H', 0) * 100:.2f}%"
+        )
+
+        pcol2.metric(
+            "Draw",
+            f"{probability_dict.get('D', 0) * 100:.2f}%"
+        )
+
+        pcol3.metric(
+            "Away Win",
+            f"{probability_dict.get('A', 0) * 100:.2f}%"
+        )
+
+        st.subheader("Prediction Inputs")
+
+        st.dataframe(
+            future_input,
+            use_container_width=True,
+            hide_index=True
         )
 
 
