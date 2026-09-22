@@ -171,25 +171,7 @@ if page == "Overview":
 elif page == "Match Prediction":
 
     st.header("⚽ Match Prediction")
-
-    st.info(
-        """
-        The prediction model is the Random Forest model developed in
-        Experiment 4 and deployed through the FastAPI service in
-        Experiment 6.
-        """
-    )
-
-    st.warning(
-        """
-        Important model limitation: the deployed model was trained using
-        match statistics such as shots, fouls and corners. Some of these
-        values are normally available only after a match. Therefore,
-        this dashboard demonstrates model inference and should not be
-        interpreted as a purely pre-match prediction system.
-        """
-    )
-
+    
     st.subheader("Model Input")
 
     col1, col2 = st.columns(2)
@@ -388,14 +370,14 @@ elif page == "Team Performance":
     # Team selection
     # -----------------------------
 
-    leagues = sorted(df["league"].dropna().unique())
+    leagues = sorted(matches["league"].dropna().unique())
 
     selected_league = st.selectbox(
         "Select League",
         leagues
     )
 
-    league_df = df[df["league"] == selected_league].copy()
+    league_df = matches[matches["league"] == selected_league].copy()
 
     teams = sorted(
         set(league_df["hometeam"].dropna().unique())
