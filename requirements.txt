@@ -1,9 +1,7 @@
-streamlit
+streamlit==1.64.0
 pandas
 numpy
 joblib
 scikit-learn==1.6.1
-shap
-lime
 scipy
 matplotlib
